@@ -26,6 +26,10 @@ class Settings:
     logo_padding: int = 24
     plate_padding: int = 14
     plate_alpha: int = 215
+    plate_style: str = "frosted"  # light | dark | frosted
+    plate_blur_radius: float = 10.0
+    plate_tint_alpha: int = 110  # 0-255, higher = darker
+    plate_border_alpha: int = 210
 
 
 def _open_image(path: Path) -> Image.Image:
@@ -108,21 +112,43 @@ def _overlay_logo(base_rgba: Image.Image, logo_path: Path, s: Settings) -> Image
 
     plate_w = logo.size[0] + s.plate_padding * 2
     plate_h = logo.size[1] + s.plate_padding * 2
-    plate = Image.new("RGBA", (plate_w, plate_h), (255, 255, 255, s.plate_alpha))
+
+    x = bw - plate_w - s.logo_padding
+    y = bh - plate_h - s.logo_padding
 
     from PIL import ImageDraw  # local import
+
+    radius = 18
+
+    def _rounded_mask(w: int, h: int, r: int) -> Image.Image:
+        m = Image.new("L", (w, h), 0)
+        d = ImageDraw.Draw(m)
+        d.rounded_rectangle((0, 0, w - 1, h - 1), radius=r, fill=255)
+        return m
+
+    if s.plate_style == "dark":
+        plate = Image.new("RGBA", (plate_w, plate_h), (0, 0, 0, s.plate_alpha))
+    elif s.plate_style == "light":
+        plate = Image.new("RGBA", (plate_w, plate_h), (255, 255, 255, s.plate_alpha))
+    else:
+        # Frosted: blur what is behind the plate and darken it slightly.
+        region = base_rgba.crop((x, y, x + plate_w, y + plate_h))
+        region = region.filter(ImageFilter.GaussianBlur(s.plate_blur_radius))
+        tint = Image.new("RGBA", (plate_w, plate_h), (0, 0, 0, s.plate_tint_alpha))
+        plate = Image.alpha_composite(region, tint)
+        mask = _rounded_mask(plate_w, plate_h, radius)
+        clipped = Image.new("RGBA", (plate_w, plate_h), (0, 0, 0, 0))
+        clipped.paste(plate, (0, 0), mask)
+        plate = clipped
 
     plate_draw = ImageDraw.Draw(plate)
     plate_draw.rounded_rectangle(
         (0, 0, plate_w - 1, plate_h - 1),
-        radius=18,
-        outline=(255, 255, 255, 235),
+        radius=radius,
+        outline=(255, 255, 255, s.plate_border_alpha),
         width=2,
     )
     plate.alpha_composite(logo, (s.plate_padding, s.plate_padding))
-
-    x = bw - plate_w - s.logo_padding
-    y = bh - plate_h - s.logo_padding
 
     out = base_rgba.copy()
     out.alpha_composite(plate, (x, y))
@@ -190,6 +216,19 @@ def main() -> int:
     ap.add_argument("--center-scale", type=float, default=Settings.center_scale)
     ap.add_argument("--feather", type=int, default=Settings.feather)
     ap.add_argument("--logo-scale", type=float, default=Settings.logo_scale)
+    ap.add_argument(
+        "--plate-style",
+        choices=["light", "dark", "frosted"],
+        default=Settings.plate_style,
+        help="Logo background plate style",
+    )
+    ap.add_argument("--plate-blur", type=float, default=Settings.plate_blur_radius, help="Blur radius for frosted plate")
+    ap.add_argument(
+        "--plate-tint-alpha",
+        type=int,
+        default=Settings.plate_tint_alpha,
+        help="0-255. Higher = darker frosted plate",
+    )
 
     args = ap.parse_args()
 
@@ -198,6 +237,9 @@ def main() -> int:
         center_scale=args.center_scale,
         feather=args.feather,
         logo_scale=args.logo_scale,
+        plate_style=args.plate_style,
+        plate_blur_radius=args.plate_blur,
+        plate_tint_alpha=args.plate_tint_alpha,
     )
 
     logo_path = args.logo if args.logo else None
