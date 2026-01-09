@@ -203,6 +203,33 @@ def iter_images(input_dir: Path) -> list[Path]:
     return sorted(paths)
 
 
+def _is_excluded(path: Path, *, input_dir: Path, exclude_globs: list[str]) -> bool:
+    try:
+        rel = path.relative_to(input_dir)
+    except Exception:
+        rel = path
+    rel_posix = rel.as_posix()
+    name = path.name
+
+    for pat in exclude_globs:
+        # Match both against rel path and filename for convenience
+        if Path(rel_posix).match(pat) or Path(name).match(pat):
+            return True
+    return False
+
+
+def _print_dry_run_summary(pairs: list[tuple[Path, Path]], *, limit: int = 30) -> None:
+    total = len(pairs)
+    print(f"DRY-RUN: {total} images")
+    if total == 0:
+        return
+    head = pairs[: min(limit, total)]
+    for src, dst in head:
+        print(f"- {src} -> {dst}")
+    if total > limit:
+        print(f"... ({total - limit} more not shown)")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Auto-edit images (blur background + center focus + logo overlay)")
     ap.add_argument("--input", type=Path, help="Single input image path")
@@ -211,6 +238,13 @@ def main() -> int:
     ap.add_argument("--output-dir", type=Path, help="Output folder (mirrors structure)")
     ap.add_argument("--logo", type=Path, required=False, help="Logo path (PNG recommended)")
     ap.add_argument("--dry-run", action="store_true", help="List planned operations without writing")
+    ap.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        help="Glob pattern to exclude (can be repeated). Example: --exclude '**/logo.*'",
+    )
+    ap.add_argument("--dry-run-limit", type=int, default=30, help="How many dry-run items to print")
 
     ap.add_argument("--blur", type=float, default=Settings.blur_radius)
     ap.add_argument("--center-scale", type=float, default=Settings.center_scale)
@@ -243,6 +277,7 @@ def main() -> int:
     )
 
     logo_path = args.logo if args.logo else None
+    exclude_globs: list[str] = list(args.exclude)
 
     # Single
     if args.input and args.output:
@@ -255,17 +290,30 @@ def main() -> int:
 
     # Batch
     if args.input_dir and args.output_dir:
-        images = iter_images(args.input_dir)
+        # Safe defaults for batch runs
+        if not exclude_globs:
+            exclude_globs = ["logo.*", "**/logo.*"]
+
+        images = [
+            p
+            for p in iter_images(args.input_dir)
+            if not _is_excluded(p, input_dir=args.input_dir, exclude_globs=exclude_globs)
+        ]
         if not images:
             print(f"No images found in: {args.input_dir}")
             return 2
 
+        pairs: list[tuple[Path, Path]] = []
         for src in images:
             rel = src.relative_to(args.input_dir)
             dst = args.output_dir / rel
-            if args.dry_run:
-                print(f"DRY-RUN: {src} -> {dst}")
-                continue
+            pairs.append((src, dst))
+
+        if args.dry_run:
+            _print_dry_run_summary(pairs, limit=max(1, int(args.dry_run_limit)))
+            return 0
+
+        for src, dst in pairs:
             process_one(input_path=src, output_path=dst, logo_path=logo_path, s=s)
 
         print(f"Done. Processed {len(images)} images -> {args.output_dir}")
