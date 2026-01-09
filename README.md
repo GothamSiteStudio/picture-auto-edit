@@ -1,0 +1,39 @@
+# picture-auto-edit
+
+Batch image auto-editor (Windows-friendly) for website images.
+
+What it does (v1):
+- Background blur
+- Center-focused sharp subject area (simple center mask, no segmentation)
+- Mild quality boost (contrast + unsharp mask)
+- Logo overlay (bottom-right) on a subtle white plate
+
+## Quick start
+
+1) Create a virtual environment (recommended)
+
+```powershell
+cd "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\picture-auto-edit"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+2) Run on a single image
+
+```powershell
+python picture_auto_edit.py ^
+  --input "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\Midwest Flip\midwest flip website\images\40330379-1E1C-48C3-8971-1136EB901E58.jpg" ^
+  --output ".\examples\out\example.jpg" ^
+  --logo "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\Midwest Flip\midwest flip website\images\logo.png"
+```
+
+## Batch mode (folder)
+
+```powershell
+python picture_auto_edit.py --input-dir "...\midwest flip website\images" --output-dir ".\out" --logo "...\logo.png" --dry-run
+```
+
+## Notes
+- By default, the script does **not** overwrite originals.
+- You can control blur strength, center mask size, and logo size.
