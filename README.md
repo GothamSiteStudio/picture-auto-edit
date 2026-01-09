@@ -6,7 +6,7 @@ What it does (v1):
 - Background blur
 - Center-focused sharp subject area (simple center mask, no segmentation)
 - Mild quality boost (contrast + unsharp mask)
-- Logo overlay (bottom-right) on a subtle white plate
+- Logo overlay (bottom-right) on a subtle plate
 
 ## Quick start
 
@@ -25,7 +25,8 @@ pip install -r requirements.txt
 python picture_auto_edit.py ^
   --input "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\Midwest Flip\midwest flip website\images\40330379-1E1C-48C3-8971-1136EB901E58.jpg" ^
   --output ".\examples\out\example.jpg" ^
-  --logo "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\Midwest Flip\midwest flip website\images\logo.png"
+  --logo "C:\Users\orens\OneDrive\שולחן העבודה\alpha marketing projects\Midwest Flip\midwest flip website\images\logo.png" ^
+  --plate-style frosted
 ```
 
 ## Batch mode (folder)
@@ -33,6 +34,16 @@ python picture_auto_edit.py ^
 ```powershell
 python picture_auto_edit.py --input-dir "...\midwest flip website\images" --output-dir ".\out" --logo "...\logo.png" --dry-run
 ```
+
+## Logo plate options
+
+- `--plate-style frosted` (default): blurs the background under the logo and darkens it slightly
+- `--plate-style dark`: solid darker plate
+- `--plate-style light`: solid light plate
+
+Extra knobs:
+- `--plate-blur 10`
+- `--plate-tint-alpha 110` (higher = darker)
 
 ## Notes
 - By default, the script does **not** overwrite originals.
