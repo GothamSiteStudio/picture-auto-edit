@@ -32,8 +32,12 @@ python picture_auto_edit.py ^
 ## Batch mode (folder)
 
 ```powershell
-python picture_auto_edit.py --input-dir "...\midwest flip website\images" --output-dir ".\out" --logo "...\logo.png" --dry-run
+python picture_auto_edit.py --input-dir "...\midwest flip website\images" --output-dir "...\midwest flip website\images_autoedited" --logo "...\logo.png" --dry-run
 ```
+
+Notes for batch runs:
+- Output folder should be **outside** the input folder (avoid re-processing outputs).
+- Batch mode skips `logo.*` by default. You can add more with `--exclude`.
 
 ## Logo plate options
 
