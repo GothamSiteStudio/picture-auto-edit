@@ -4,7 +4,7 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter
 
 
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -37,8 +37,8 @@ def _open_image(path: Path) -> Image.Image:
 
 def _rounded_rect_mask(size: tuple[int, int], radius: int) -> Image.Image:
     w, h = size
-    mask = Image.new("L", (w, h), 0)
-    draw = Image.new("L", (w, h), 0)
+    if radius <= 0:
+        return Image.new("L", (w, h), 255)
 
     # Pillow has ImageDraw.rounded_rectangle but to avoid extra import,
     # build via rectangles + blur feather later.
@@ -113,7 +113,12 @@ def _overlay_logo(base_rgba: Image.Image, logo_path: Path, s: Settings) -> Image
     from PIL import ImageDraw  # local import
 
     plate_draw = ImageDraw.Draw(plate)
-    plate_draw.rounded_rectangle((0, 0, plate_w - 1, plate_h - 1), radius=18, outline=(255, 255, 255, 235), width=2)
+    plate_draw.rounded_rectangle(
+        (0, 0, plate_w - 1, plate_h - 1),
+        radius=18,
+        outline=(255, 255, 255, 235),
+        width=2,
+    )
     plate.alpha_composite(logo, (s.plate_padding, s.plate_padding))
 
     x = bw - plate_w - s.logo_padding
